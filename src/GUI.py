@@ -249,8 +249,8 @@ class GUI:
         if self.isRunning:
             return
         
-        if not isWarnaUnikCukup(self.cols, self.matrix):
-             messagebox.showerror("Error", "Jumlah warna unik pada papan melebihi jumlah ratu!")
+        if not isKotakSamaWarna(self.matrix):
+             messagebox.showerror("Error", "Jumlah warna unik pada papan tidak sama dengan jumlah kotak!")
              return
 
         self.mode = 'optimal'
@@ -268,9 +268,10 @@ class GUI:
             return
         if self.isRunning:
             return
-        if not isWarnaUnikCukup(self.cols, self.matrix):
-            messagebox.showerror("Error", "Jumlah warna unik pada papan melebihi jumlah ratu!")
-            return
+        if not isKotakSamaWarna(self.matrix):
+             messagebox.showerror("Error", "Jumlah warna unik pada papan tidak sama dengan jumlah kotak!")
+             return
+        
 
         self.mode = 'bruteforce'
         self.aktivCara = kombinasiBaris([(r, c) for r in range(self.rows) for c in range(self.cols)], self.cols)

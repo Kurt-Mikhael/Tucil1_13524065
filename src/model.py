@@ -1,5 +1,11 @@
 import random
 QUEENS_LABEL = "#"
+def countWaranUnik(matrix):
+    warnaUnik = set()
+    for row in matrix:
+        for color in row:
+            warnaUnik.add(color)
+    return len(warnaUnik)
 
 def kombinasiBarisOptimal(n):
     if(len(n)<=1):
@@ -26,6 +32,56 @@ def kombinasiBaris(nTuple, length):
             result.append([nTuple[i]] + p)
     return result
 
+def kombinasiBarisGenerator(nTuple, length):
+    """
+    Generator untuk kombinasi tanpa menggunakan itertools.
+    Menghasilkan kombinasi secara lazy untuk menghemat memori.
+    """
+    if length == 0:
+        yield []
+        return
+    if len(nTuple) == 0:
+        return
+
+    for i in range(len(nTuple)):
+        current = nTuple[i]
+        sisa = nTuple[i+1:]
+        for p in kombinasiBarisGenerator(sisa, length-1):
+            yield [current] + p
+
+def kombinasiBarisOptimalGenerator(n):
+    """
+    Generator untuk permutasi (mode optimal) secara lazy.
+    Tidak menggunakan itertools.
+    """
+    if len(n) <= 1:
+        yield n
+        return
+
+    for i in range(len(n)):
+        current = n[i]
+        sisa = n[:i] + n[i+1:]
+        for p in kombinasiBarisOptimalGenerator(sisa):
+            yield [current] + p
+
+def hitungJumlahKombinasi(n, r):
+    """
+    Hitung C(n, r) = n! / (r! * (n-r)!)
+    Untuk menampilkan total kombinasi yang akan dicek.
+    """
+    if r > n or r < 0:
+        return 0
+    if r == 0 or r == n:
+        return 1
+
+    # Optimasi: C(n,r) = C(n, n-r)
+    r = min(r, n - r)
+
+    result = 1
+    for i in range(r):
+        result = result * (n - i) // (i + 1)
+    return result
+
 
 def isPersegi(nRows, nCols):
     return nRows == nCols
@@ -48,34 +104,33 @@ def isValidCombinationOptimal(combination, matrix):
         usedColors.append(matrix[row][col])
     return True
 
-def isWarnaUnikCukup(nRow, matrix):
-    warnaUnik = set()
-    for row in matrix:
-        for color in row:
-            warnaUnik.add(color)
-    return len(warnaUnik) <= nRow
 
-def isValidCombination(combination, matrix):  
-    warnaUnik = set()
-    for row in matrix:
-        for color in row:
-            warnaUnik.add(color)
-    if len(warnaUnik) > len(combination):
-        return False
+def isValidCombination(combination, matrix):
+    """
+    Optimized validation with early pruning.
+    """
+    usedColors = set()  # Use set for O(1) lookup
 
-    usedColors = []
     for i in range(len(combination)):
         row, col = combination[i]
-        if matrix[row][col] in usedColors:
+        color = matrix[row][col]
+
+        # Early check: warna sudah dipakai
+        if color in usedColors:
             return False
+        usedColors.add(color)
+
+        # Check conflicts dengan posisi sebelumnya
         for j in range(i):
             prev_row, prev_col = combination[j]
-            if abs(row - prev_row) == 1 and abs(col - prev_col) == 1:
-                return False
+
+            # Same row or column
             if row == prev_row or col == prev_col:
                 return False
-        usedColors.append(matrix[row][col])
-    
+
+            # Diagonal (distance 1)
+            if abs(row - prev_row) == 1 and abs(col - prev_col) == 1:
+                return False
 
     return True
 
@@ -129,5 +184,12 @@ def generateRGB(char):
     return colorMap.get(char, '#CCCCCC') 
 
 
+
+def isKotakSamaWarna(matrix):
+    nWarnaUnik = countWaranUnik(matrix)
+    nRows = len(matrix)
+    if nWarnaUnik != nRows:
+        return False
+    return True
 #============================================================
 
