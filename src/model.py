@@ -33,40 +33,24 @@ def kombinasiBaris(nTuple, length):
     return result
 
 def kombinasiBarisGenerator(nTuple, length, start=0):
-    """
-    Ultra-optimized generator dengan minimal overhead.
-    Uses buffer approach instead of list concatenation.
-    """
     n = len(nTuple)
-
     if length == 0:
         yield []
         return
-
     if start >= n or n - start < length:
         return
-
-    # Single element case - fast path
     if length == 1:
         for i in range(start, n):
             yield [nTuple[i]]
         return
-
-    # General case with optimized recursion
     for i in range(start, n - length + 1):
         current = nTuple[i]
-        # Inline recursion result to avoid list concatenation overhead
         for suffix in kombinasiBarisGenerator(nTuple, length - 1, i + 1):
-            # Optimized: extend existing list instead of concatenation
             result = [current]
             result.extend(suffix)
             yield result
 
 def kombinasiBarisOptimalGenerator(n):
-    """
-    Generator untuk permutasi (mode optimal) secara lazy.
-    Tidak menggunakan itertools.
-    """
     if len(n) <= 1:
         yield n
         return
@@ -78,16 +62,12 @@ def kombinasiBarisOptimalGenerator(n):
             yield [current] + p
 
 def hitungJumlahKombinasi(n, r):
-    """
-    Hitung C(n, r) = n! / (r! * (n-r)!)
-    Untuk menampilkan total kombinasi yang akan dicek.
-    """
+
     if r > n or r < 0:
         return 0
     if r == 0 or r == n:
         return 1
 
-    # Optimasi: C(n,r) = C(n, n-r)
     r = min(r, n - r)
 
     result = 1
@@ -119,38 +99,29 @@ def isValidCombinationOptimal(combination, matrix):
 
 
 def isValidCombination(combination, matrix):
-    """
-    Ultra-optimized validation - squeeze every bit of performance!
-    """
     n = len(combination)
     matrixSize = len(matrix)
 
-    # Pre-allocate for speed - array access faster than set for N <= 20
     usedColors = set()
     usedRows = [False] * matrixSize
-    usedCols = [False] * matrixSize  # Assumed square matrix
+    usedCols = [False] * matrixSize
 
-    # Process each position
     i = 0
     while i < n:
         row, col = combination[i]
 
-        # Ultra fast row/col check with boolean array
         if usedRows[row] or usedCols[col]:
             return False
 
-        # Color check
         color = matrix[row][col]
         if color in usedColors:
             return False
 
-        # Diagonal check with aggressive early exit
-        # Manual unrolling for first 2 positions (most common case)
+
         if i > 0:
             pr0, pc0 = combination[0]
             rd0 = row - pr0
             cd0 = col - pc0
-            # Fast diagonal check: abs(diff) must be 1 for both
             if (rd0 == 1 or rd0 == -1) and (cd0 == 1 or cd0 == -1):
                 return False
 
@@ -161,20 +132,17 @@ def isValidCombination(combination, matrix):
             if (rd1 == 1 or rd1 == -1) and (cd1 == 1 or cd1 == -1):
                 return False
 
-        # Check remaining queens (j >= 2)
         j = 2
         while j < i:
             prev_row, prev_col = combination[j]
             row_diff = row - prev_row
             col_diff = col - prev_col
 
-            # Inlined check for maximum speed
             if (row_diff == 1 or row_diff == -1) and (col_diff == 1 or col_diff == -1):
                 return False
 
             j += 1
 
-        # Mark as used
         usedRows[row] = True
         usedCols[col] = True
         usedColors.add(color)

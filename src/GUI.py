@@ -336,7 +336,7 @@ class GUI:
                 self.progressCounter = iterCount
                 waktu = time.time() - self.startTime
                 self.timer.config(text=f"Waktu: {waktu:.3f}dtk")
-                self.status.config(text=f"Testing iteration: {iterCount:,} | Last: {data}", fg="blue")
+                self.status.config(text=f"Testing iteration: {iterCount:,} | Last: {data}", fg="black")
                 self.drawQueens(data)
 
             elif msgType == 'found':
