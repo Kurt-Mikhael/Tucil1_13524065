@@ -5,6 +5,8 @@ import tkinter as tk
 from tkinter import Button, messagebox, filedialog
 import time
 import os
+import threading
+import queue
 
 QUEENS_LABEL = "#"
 class GUI:
@@ -19,9 +21,15 @@ class GUI:
         self.startTime = 0
         self.currentIdx = 0
         self.delay = 500
-        self.mode = None  
+        self.mode = None
         self.root.title("Algoritma Brute Force untuk Masalah N-Queens")
         self.namaFileInput = ""
+
+        self.workerThread = None
+        self.resultQueue = queue.Queue()
+        self.stopFlag = threading.Event()
+        self.updateInterval = 1000000  
+        self.progressCounter = 0
 
         topF = tk.Frame(root)
         topF.pack(pady=5, padx=10)
@@ -262,6 +270,32 @@ class GUI:
         self.startBruteButton.config(state=tk.DISABLED)
         self.prosesAlgo()
 
+
+    def workerBruteForce(self):
+        try:
+            allPositions = [(r, c) for r in range(self.rows) for c in range(self.cols)]
+            generator = kombinasiBarisGenerator(allPositions, self.cols)
+
+            iterationCount = 0
+            for combination in generator:
+                if self.stopFlag.is_set():
+                    self.resultQueue.put(('stopped', None, iterationCount))
+                    return
+
+                iterationCount += 1
+
+                if iterationCount % self.updateInterval == 0:
+                    self.resultQueue.put(('progress', combination, iterationCount))
+
+                if isValidCombination(combination, self.matrix):
+                    self.resultQueue.put(('found', combination, iterationCount))
+                    return
+
+            self.resultQueue.put(('notfound', None, iterationCount))
+
+        except Exception as e:
+            self.resultQueue.put(('error', str(e), 0))
+
     def startBrute(self):
         if len(self.matrix) == 0:
             messagebox.showwarning("Peringatan", "Silakan load file papan terlebih dahulu!")
@@ -271,16 +305,88 @@ class GUI:
         if not isKotakSamaWarna(self.matrix):
              messagebox.showerror("Error", "Jumlah warna unik pada papan tidak sama dengan jumlah kotak!")
              return
-        
+
+        if not isPersegi(self.rows, self.cols):
+            messagebox.showerror("Error", "Papan harus berbentuk persegi!")
+            return
 
         self.mode = 'bruteforce'
-        self.aktivCara = kombinasiBaris([(r, c) for r in range(self.rows) for c in range(self.cols)], self.cols)
         self.isRunning = True
         self.startTime = time.time()
-        self.currentIdx = 0
+        self.progressCounter = 0
+        self.stopFlag.clear()
+
+        while not self.resultQueue.empty():
+            self.resultQueue.get()
+
         self.startOptimalButton.config(state=tk.DISABLED)
         self.startBruteButton.config(state=tk.DISABLED)
-        self.prosesAlgo()
+
+        self.workerThread = threading.Thread(target=self.workerBruteForce, daemon=True)
+        self.workerThread.start()
+
+        self.checkQueue()
+
+    def checkQueue(self):
+
+        try:
+            msgType, data, iterCount = self.resultQueue.get_nowait()
+
+            if msgType == 'progress':
+                self.progressCounter = iterCount
+                waktu = time.time() - self.startTime
+                self.timer.config(text=f"Waktu: {waktu:.3f}dtk")
+                self.status.config(text=f"Testing iteration: {iterCount:,} | Last: {data}", fg="blue")
+                self.drawQueens(data)
+
+            elif msgType == 'found':
+                self.isRunning = False
+                waktu = time.time() - self.startTime
+                self.timer.config(text=f"Waktu: {waktu:.3f}dtk")
+                self.status.config(text=f"Solusi ditemukan: {data}", fg="green")
+                self.drawQueens(data)
+
+                self.aktivCara = [data]
+                self.currentIdx = 0
+
+                messagebox.showinfo("Sukses", f"Solusi Ditemukan!\n\nIterasi: {iterCount:,}\nWaktu: {waktu:.3f} detik")
+                self.startOptimalButton.config(state=tk.NORMAL)
+                self.startBruteButton.config(state=tk.NORMAL)
+                return
+
+            elif msgType == 'notfound':
+                self.isRunning = False
+                waktu = time.time() - self.startTime
+                self.timer.config(text=f"Waktu: {waktu:.3f}dtk")
+                self.status.config(text=f"Tidak ada solusi (checked {iterCount:,} combinations)", fg="red")
+                messagebox.showinfo("Info", f"Tidak ada solusi yang valid\n\nTotal iterasi: {iterCount:,}\nWaktu: {waktu:.3f} detik")
+                self.startOptimalButton.config(state=tk.NORMAL)
+                self.startBruteButton.config(state=tk.NORMAL)
+                return
+
+            elif msgType == 'stopped':
+                self.isRunning = False
+                self.status.config(text="Dihentikan oleh user", fg="orange")
+                self.startOptimalButton.config(state=tk.NORMAL)
+                self.startBruteButton.config(state=tk.NORMAL)
+                return
+
+            elif msgType == 'error':
+                self.isRunning = False
+                self.status.config(text=f"Error: {data}", fg="red")
+                messagebox.showerror("Error", f"Terjadi error: {data}")
+                self.startOptimalButton.config(state=tk.NORMAL)
+                self.startBruteButton.config(state=tk.NORMAL)
+                return
+
+        except queue.Empty:
+            if self.isRunning:
+                waktu = time.time() - self.startTime
+                self.timer.config(text=f"Waktu: {waktu:.3f}dtk")
+
+        if self.isRunning:
+            self.root.after(100, self.checkQueue)  
+
 
     def speedUpFunc(self):
         self.delay = int(max(1, self.delay * 0.5)) 
